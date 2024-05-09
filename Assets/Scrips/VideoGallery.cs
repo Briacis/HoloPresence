@@ -4,6 +4,7 @@ using System.IO;
 using UnityEngine.Video;
 using System.Linq;
 using TMPro;
+using System;  // Include System namespace for DateTime
 
 public class VideoGallery : MonoBehaviour
 {
@@ -12,6 +13,7 @@ public class VideoGallery : MonoBehaviour
     public int contentLength = 650;
     public Transform contentPanel; // Assign in the inspector
     public VideoPlayer videoPlayer; // Assign in the inspector
+    public AudioSource audioSource;
     public GameObject ScrollView;
     public GameObject Panel;
     public float spacing = 5f;
@@ -19,10 +21,10 @@ public class VideoGallery : MonoBehaviour
     public Button stopButton;
     public Slider seekSlider;
     public GameObject Headder;
-    //public GameObject VideoCanvas;
     public GameObject videoDisplayObject;
     public GameObject menuTitle;
     public string videoDirectoryPath;
+    private string csvFilePath = "videoLog.csv";  // Path to the CSV file
 
     private bool isSeeking = false;
     private bool isPlaying = false;
@@ -40,6 +42,7 @@ public class VideoGallery : MonoBehaviour
 
     void Start()
     {
+        InitializeCSV();  // Ensure CSV file is ready
         //string videoDirectoryPath = @"D:\Unity\TestMenu\TestFolder\TestSubfolder"; // Update this path
         //string videoDirectoryPath = @"E:\Traditional Crafts"; // Update this path
         //string videoDirectoryPath = @"F:\Final Mayo Clips\Oral History\Betty"; // Update this path
@@ -283,10 +286,47 @@ public class VideoGallery : MonoBehaviour
     }
 
 
+    // Method to initialize the CSV file
+    private void InitializeCSV()
+    {
+        // Check if the CSV file exists; if not, create it
+        if (!File.Exists(csvFilePath))
+        {
+            using (StreamWriter sw = File.CreateText(csvFilePath))
+            {
+                sw.WriteLine("Date,Time,Video Title");  // Write the header line
+            }
+        }
+    }
+
+    // Method to log video play events to the CSV
+    private void LogVideoPlay(string videoTitle)
+    {
+        using (StreamWriter sw = File.AppendText(csvFilePath))
+        {
+            string logEntry = $"{DateTime.Now.ToShortDateString()},{DateTime.Now.ToShortTimeString()},{videoTitle}";
+            sw.WriteLine(logEntry);
+        }
+    }
+
     public void PlayVideo(string path)
     {
+        videoPlayer.source = VideoSource.Url;
         videoPlayer.url = path;
+        videoPlayer.audioOutputMode = VideoAudioOutputMode.AudioSource;
+        videoPlayer.SetTargetAudioSource(0, audioSource);
+        videoPlayer.controlledAudioTrackCount = 1;
+        videoPlayer.EnableAudioTrack(0, true);
+
+        videoPlayer.Prepare();
         videoPlayer.isLooping = true;
+        videoPlayer.Play();
+        audioSource.Play();
+
+        // Log the video play event
+        string videoTitle = Path.GetFileNameWithoutExtension(path);
+        LogVideoPlay(videoTitle);
+
         ScrollView.gameObject.SetActive(false);
         Panel.gameObject.SetActive(false);
         Headder.gameObject.SetActive(false);
